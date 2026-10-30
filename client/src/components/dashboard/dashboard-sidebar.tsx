@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, LogOut, Users, Layers, X } from "lucide-react";
+import { CreditCard, LayoutDashboard, LogOut, ReceiptText, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +77,7 @@ export function DashboardSidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 onClick={onClose}
                 className={cn(
                   "group relative flex items-center gap-3 px-5 py-[11px] text-[11px] font-semibold uppercase tracking-[0.1em] transition",
@@ -116,9 +117,8 @@ export function DashboardSidebar({
 export const adminNavItems: SidebarNavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Users", href: "/admin/users", icon: Users },
-  { label: "Managers", href: "/admin/managers", icon: Users },
-  { label: "Supervisors", href: "/admin/supervisors", icon: Users },
-  { label: "Platforms", href: "/admin/platforms", icon: Layers },
+  { label: "Pay-action", href: "/admin/pay-action", icon: CreditCard },
+  { label: "Transactions", href: "/admin/transactions", icon: ReceiptText },
 ];
 
 export const managerNavItems: SidebarNavItem[] = [
@@ -134,4 +134,6 @@ export const supervisorNavItems: SidebarNavItem[] = [
 export const accountantNavItems: SidebarNavItem[] = [
   { label: "Dashboard", href: "/accountant", icon: LayoutDashboard },
   { label: "Users", href: "/accountant/users", icon: Users },
+  { label: "Pay-action", href: "/accountant/pay-action", icon: CreditCard },
+  { label: "Transactions", href: "/accountant/transactions", icon: ReceiptText },
 ];
