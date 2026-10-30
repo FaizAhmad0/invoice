@@ -1,3 +1,8 @@
+import dns from "dns";
+
+if (process.env.NODE_ENV !== "production") {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+}
 import app from "./app.js";
 import env from "./config/env.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";

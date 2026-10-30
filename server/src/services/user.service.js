@@ -160,6 +160,10 @@ const SORTABLE_FIELDS = {
   updatedAt: "updatedAt",
 };
 
+function escapeSearch(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function getUsers(query, user) {
   const {
     page = 1,
@@ -191,17 +195,20 @@ export async function getUsers(query, user) {
     ];
   }
 
+  const scopeMatch = { ...matchStage };
+
   // ── Search across name, email, primaryContact, UID, enrollment IDs ──
   if (search) {
-    const searchRegex = { $regex: search, $options: "i" };
+    const searchRegex = { $regex: escapeSearch(search), $options: "i" };
     const orConditions = [
       { name: searchRegex },
       { email: searchRegex },
       { primaryContact: searchRegex },
     ];
 
-    const uidNum = parseInt(search, 10);
-    if (!isNaN(uidNum)) {
+    const uidText = search.replace(/^UID\s*/i, "");
+    const uidNum = Number(uidText);
+    if (/^\d+$/.test(uidText) && Number.isSafeInteger(uidNum)) {
       orConditions.push({ uid: uidNum });
     }
 
@@ -227,11 +234,11 @@ export async function getUsers(query, user) {
   if (platform) {
     const platformLower = platform.toLowerCase();
     if (platformLower === "amazon") {
-      matchStage.enrollmentIdAmazon = { $exists: true, $ne: null };
+      matchStage.enrollmentIdAmazon = { $exists: true, $nin: [null, ""] };
     } else if (platformLower === "website") {
-      matchStage.enrollmentIdWebsite = { $exists: true, $ne: null };
+      matchStage.enrollmentIdWebsite = { $exists: true, $nin: [null, ""] };
     } else if (platformLower === "etsy") {
-      matchStage.enrollmentIdEtsy = { $exists: true, $ne: null };
+      matchStage.enrollmentIdEtsy = { $exists: true, $nin: [null, ""] };
     }
   }
 
@@ -279,7 +286,7 @@ export async function getUsers(query, user) {
   // ── Batch filter (any platform batch) ──
   if (batch) {
     const trimmedBatch = batch.trim();
-    const batchRegex = { $regex: trimmedBatch, $options: "i" };
+    const batchRegex = { $regex: escapeSearch(trimmedBatch), $options: "i" };
     const batchConditions = [
       { batchAmazon: batchRegex },
       { batchWebsite: batchRegex },
@@ -342,76 +349,105 @@ export async function getUsers(query, user) {
   const pipeline = [
     { $match: matchStage },
     {
-      $lookup: {
-        from: "users",
-        localField: "amazonManager",
-        foreignField: "_id",
-        as: "amazonManagerData",
-        pipeline: [{ $project: { name: 1, email: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "websiteManager",
-        foreignField: "_id",
-        as: "websiteManagerData",
-        pipeline: [{ $project: { name: 1, email: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "etsyManager",
-        foreignField: "_id",
-        as: "etsyManagerData",
-        pipeline: [{ $project: { name: 1, email: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "platforms",
-        localField: "platforms",
-        foreignField: "_id",
-        as: "platformsData",
-        pipeline: [{ $project: { name: 1, status: 1 } }],
-      },
-    },
-    {
-      $addFields: {
-        amazonManager: { $arrayElemAt: ["$amazonManagerData", 0] },
-        websiteManager: { $arrayElemAt: ["$websiteManagerData", 0] },
-        etsyManager: { $arrayElemAt: ["$etsyManagerData", 0] },
-        platforms: "$platformsData",
-      },
-    },
-    {
-      $project: {
-        amazonManagerData: 0,
-        websiteManagerData: 0,
-        etsyManagerData: 0,
-        platformsData: 0,
-        password: 0,
-        tokenVersion: 0,
-        __v: 0,
-      },
-    },
-    { $sort: { [sortField]: sortDir } },
-    {
       $facet: {
-        data: [{ $skip: skip }, { $limit: limitNum }],
+        data: [
+          { $sort: { [sortField]: sortDir, _id: sortDir } },
+          { $skip: skip },
+          { $limit: limitNum },
+          {
+            $lookup: {
+              from: "users",
+              localField: "amazonManager",
+              foreignField: "_id",
+              as: "amazonManagerData",
+              pipeline: [{ $project: { name: 1, email: 1 } }],
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "websiteManager",
+              foreignField: "_id",
+              as: "websiteManagerData",
+              pipeline: [{ $project: { name: 1, email: 1 } }],
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "etsyManager",
+              foreignField: "_id",
+              as: "etsyManagerData",
+              pipeline: [{ $project: { name: 1, email: 1 } }],
+            },
+          },
+          {
+            $lookup: {
+              from: "platforms",
+              localField: "platforms",
+              foreignField: "_id",
+              as: "platformsData",
+              pipeline: [{ $project: { name: 1, status: 1 } }],
+            },
+          },
+          {
+            $addFields: {
+              amazonManager: { $arrayElemAt: ["$amazonManagerData", 0] },
+              websiteManager: { $arrayElemAt: ["$websiteManagerData", 0] },
+              etsyManager: { $arrayElemAt: ["$etsyManagerData", 0] },
+              platforms: "$platformsData",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              uid: 1,
+              name: 1,
+              email: 1,
+              primaryContact: 1,
+              enrollmentIdAmazon: 1,
+              enrollmentIdWebsite: 1,
+              enrollmentIdEtsy: 1,
+              batchAmazon: 1,
+              batchWebsite: 1,
+              batchEtsy: 1,
+              amazonManager: 1,
+              websiteManager: 1,
+              etsyManager: 1,
+              platforms: 1,
+              createdAt: 1,
+            },
+          },
+        ],
         totalCount: [{ $count: "total" }],
       },
     },
   ];
 
-  const [result] = await User.aggregate(pipeline);
+  const enrollmentCount = (field) => ({
+    $sum: { $cond: [{ $ne: [{ $ifNull: [`$${field}`, ""] }, ""] }, 1, 0] },
+  });
+  const [[result], [summary]] = await Promise.all([
+    User.aggregate(pipeline),
+    User.aggregate([
+      { $match: scopeMatch },
+      { $group: {
+        _id: null,
+        total: { $sum: 1 },
+        amazon: enrollmentCount("enrollmentIdAmazon"),
+        website: enrollmentCount("enrollmentIdWebsite"),
+        etsy: enrollmentCount("enrollmentIdEtsy"),
+      } },
+      { $project: { _id: 0 } },
+    ]),
+  ]);
   const data = result.data;
   const total = result.totalCount[0]?.total || 0;
   const totalPages = Math.ceil(total / limitNum);
 
   return {
     data,
+    summary: summary ?? { total: 0, amazon: 0, website: 0, etsy: 0 },
     meta: {
       page: pageNum,
       limit: limitNum,
@@ -464,7 +500,7 @@ export async function updateUser(userId, updateData) {
 }
 
 export async function deleteUser(userId) {
-  const user = await User.findByIdAndDelete(userId).select("_id name");
+  const user = await User.findOneAndDelete({ _id: userId, role: "user" }).select("_id name");
 
   if (!user) {
     throw new AppError("User not found", 404);
