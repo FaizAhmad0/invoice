@@ -2,50 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import {
-  ChevronDown,
-  ChevronUp,
+  CreditCard,
   LayoutDashboard,
   LogOut,
-  ShoppingCart,
-  Globe,
+  ReceiptText,
   X,
-  Lock,
 } from "lucide-react";
 
 interface UserSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   logoutAction: () => Promise<void>;
-  enrollmentIdAmazon?: string;
-  enrollmentIdWebsite?: string;
-}
-
-interface NavSubItem {
-  label: string;
-  href: string;
 }
 
 interface NavItem {
   label: string;
-  href?: string;
+  href: string;
   icon: LucideIcon;
-  subItems?: NavSubItem[];
-  enrollmentId?: string;
 }
 
-const amazonItems: NavSubItem[] = [
-  { label: "Account", href: "/dashboard/amazon/account" },
-  { label: "Orders", href: "/dashboard/amazon/orders" },
-  { label: "Products", href: "/dashboard/amazon/products" },
-];
-
-const websiteItems: NavSubItem[] = [
-  { label: "Work Status", href: "/dashboard/website/work-status" },
-  { label: "Payment Status", href: "/dashboard/website/payment-status" },
+const navigation: NavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Payment", href: "/dashboard/payment", icon: CreditCard },
+  { label: "Transactions", href: "/dashboard/transactions", icon: ReceiptText },
 ];
 
 function isActivePath(
@@ -62,28 +43,8 @@ export function UserSidebar({
   isOpen,
   onClose,
   logoutAction,
-  enrollmentIdAmazon,
-  enrollmentIdWebsite,
 }: UserSidebarProps) {
   const pathname = usePathname();
-  const [expandedAmazon, setExpandedAmazon] = useState(true);
-  const [expandedWebsite, setExpandedWebsite] = useState(true);
-
-  const navigation: NavItem[] = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    {
-      label: "Amazon",
-      icon: ShoppingCart,
-      subItems: amazonItems,
-      enrollmentId: enrollmentIdAmazon,
-    },
-    {
-      label: "Website",
-      icon: Globe,
-      subItems: websiteItems,
-      enrollmentId: enrollmentIdWebsite,
-    },
-  ];
 
   return (
     <>
@@ -117,99 +78,15 @@ export function UserSidebar({
           </p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-0 py-2">
+        <nav aria-label="User navigation" className="flex-1 overflow-y-auto px-0 py-2">
           {navigation.map((item) => {
             const Icon = item.icon;
-            const isLocked = item.label !== "Dashboard" && !item.enrollmentId;
-            const isClickable = !isLocked;
-
-            if (item.subItems) {
-              const isExpanded = item.label === "Amazon" ? expandedAmazon : expandedWebsite;
-              const setExpanded = item.label === "Amazon" ? setExpandedAmazon : setExpandedWebsite;
-              const active = item.subItems.some(sub => isActivePath(pathname, sub.href));
-
-              return (
-                <div key={item.label} className="flex flex-col">
-                  <button
-                    onClick={() => isClickable && setExpanded(!isExpanded)}
-                    className={`group relative flex items-center justify-between px-5 py-[11px] text-[10px] font-semibold uppercase tracking-[0.1em] transition ${
-                      isLocked
-                        ? "cursor-not-allowed text-slate-400 opacity-60"
-                        : active
-                          ? "bg-blue-50 text-blue-700"
-                          : isExpanded
-                            ? "bg-slate-50 text-slate-900"
-                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                      {isLocked && <Lock className="h-3 w-3 text-slate-400" />}
-                    </div>
-                    {isClickable && (
-                      isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeInOut" }}
-                        className="overflow-hidden bg-slate-50/50"
-                      >
-                        <div className="py-1">
-                          {item.subItems.map((sub, subIndex) => {
-                            const subActive = isActivePath(pathname, sub.href);
-                            return (
-                              <motion.div
-                                key={sub.href}
-                                initial={{ opacity: 0, x: -12 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{
-                                  duration: 0.2,
-                                  delay: subIndex * 0.06,
-                                  ease: "easeOut",
-                                }}
-                              >
-                                <Link
-                                  href={isClickable ? sub.href : "#"}
-                                  onClick={isClickable ? onClose : (e) => e.preventDefault()}
-                                  className={`flex items-center px-12 py-2 text-[9px] font-bold uppercase tracking-[0.05em] transition ${
-                                    isLocked
-                                      ? "cursor-not-allowed text-slate-300 opacity-60"
-                                      : subActive
-                                        ? "text-blue-700"
-                                        : "text-slate-500 hover:text-slate-950"
-                                  }`}
-                                >
-                                  {sub.label}
-                                </Link>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            }
-
-            const active = item.href
-              ? isActivePath(
-                  pathname,
-                  item.href,
-                  item.label === "Dashboard"
-                )
-              : false;
+            const active = isActivePath(pathname, item.href, item.href === "/dashboard");
             return (
               <Link
                 key={item.label}
-                href={item.href || "#"}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
                 onClick={onClose}
                 className={`group relative flex items-center gap-3 px-5 py-[11px] text-[10px] font-semibold uppercase tracking-[0.1em] transition ${
                   active

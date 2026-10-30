@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
 import { useLogout } from "@/features/auth/hooks/use-auth";
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar";
 import { UserSidebar } from "@/components/dashboard/user-sidebar";
@@ -12,7 +11,6 @@ export default function UserDashboardLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user } = useAuthStore();
   const logoutMutation = useLogout();
 
   useEffect(() => {
@@ -31,8 +29,6 @@ export default function UserDashboardLayout({
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         logoutAction={async () => logoutMutation.mutate()}
-        enrollmentIdAmazon={user?.enrollmentIdAmazon}
-        enrollmentIdWebsite={user?.enrollmentIdWebsite}
       />
 
       <div className="pt-[72px] lg:pl-[240px]">
