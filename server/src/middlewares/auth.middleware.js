@@ -21,7 +21,8 @@ const authenticate = async (req, res, next) => {
   try {
     const decoded = verifyToken(token);
 
-    const user = await User.findById(decoded.id).select("tokenVersion role").lean();
+    // Apply the same schema defaults as login for older accounts without tokenVersion.
+    const user = await User.findById(decoded.id).select("tokenVersion role");
     if (!user) {
       return next(new AppError("User no longer exists", 401));
     }
